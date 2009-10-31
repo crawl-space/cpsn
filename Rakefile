@@ -5,8 +5,8 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "cpsn"
-    gem.summary = %Q{TODO: one-line summary of your gem}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.summary = %Q{Query PSN friend status from the CLI}
+    gem.description = %Q{Query PSN friend status from the CLI}
     gem.email = "jbowes@repl.ca"
     gem.homepage = "http://github.com/jbowes/cpsn"
     gem.authors = ["James Bowes"]
@@ -14,6 +14,7 @@ begin
     gem.add_dependency "hpricot"
     gem.add_dependency "json"
   end
+  Jeweler::GemcutterTasks.new
 rescue LoadError
   puts "Jeweler (or a dependency) not available. Install it with: gem install jeweler"
 end
