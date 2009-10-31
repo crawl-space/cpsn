@@ -22,6 +22,12 @@ login_form.loginName = username
 login_form.password = password
 page = agent.submit(login_form)
 link = page.links.first
+
+if link.text == "Sign In"
+    puts "Error logging in. Did you give the right username and password?"
+    exit
+end
+
 page = link.click
 page = agent.get(friend_url)
 body = Hpricot.parse(page.body)
@@ -41,8 +47,3 @@ for div in divs
         puts "offline\t" + data["userName"] 
     end
 end
-    
-
-#page = agent.get("http://profiles.us.playstation.com/playstation/psn/profile/get_gamer_summary_data?id=nlconnor")
-
-#print page.body
