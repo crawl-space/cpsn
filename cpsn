@@ -3,7 +3,6 @@
 require 'rubygems'
 require 'mechanize'
 require 'hpricot'
-require 'open-uri'
 require 'json'
 
 username = ARGV[0]
