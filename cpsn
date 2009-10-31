@@ -53,6 +53,10 @@ def get_friend_status(agent, friend)
 
     friend = {:name => data["userName"]}
 
+    if data["onlineStatus"] == nil
+        return nil
+    end
+
     if data["onlineStatus"]["extensionStatus"] != nil
        friend[:status] = 'online'
        friend[:playing] = data["onlineStatus"]["extensionStatus"]["title"]
@@ -65,10 +69,19 @@ def get_friend_status(agent, friend)
 end
 
 agent = get_agent()
-friend_names = get_friends(agent)
+
+if ARGV.length >= 3
+    friend_names = ARGV[2..-1]
+else
+    friend_names = get_friends(agent)
+end
 
 for friend_name in friend_names
     friend = get_friend_status(agent, friend_name)
 
-    puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing]
+    if friend
+        puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing]
+    else
+        puts "Error: no access to " + friend_name
+    end
 end
