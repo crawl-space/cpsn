@@ -1,0 +1,49 @@
+#!/usr/bin/ruby
+
+require 'rubygems'
+require 'mechanize'
+require 'hpricot'
+require 'open-uri'
+require 'json'
+
+username = ARGV[0]
+password = ARGV[1]
+
+login_url = "https://store.playstation.com/external/index.vm?returnURL=https%3a%2f%2fsecureus.playstation.com%2fRegistration%2fPSNL%2fSignInFrame.aspx"
+friend_url = "http://profiles.us.playstation.com/playstation/psn/profile/friends"
+json_url = "http://profiles.us.playstation.com/playstation/psn/profile/get_gamer_summary_data?id="
+
+agent = WWW::Mechanize.new
+agent.user_agent_alias = 'Mac FireFox'
+agent.redirect_ok = true
+
+page = agent.get(login_url)
+login_form = page.forms.first
+login_form.loginName = username
+login_form.password = password
+page = agent.submit(login_form)
+link = page.links.first
+page = link.click
+page = agent.get(friend_url)
+body = Hpricot.parse(page.body)
+divs = body.search("div.slotcontent")
+
+#puts divs.length
+
+for div in divs
+    friend = div.attributes["id"]
+
+    page = agent.get(json_url + friend)
+    data = JSON.parse(page.body)
+
+    if data["onlineStatus"]["extensionStatus"] != nil
+        puts "online\t" + data["userName"]  + "\t"  + data["onlineStatus"]["extensionStatus"]["title"]
+    else
+        puts "offline\t" + data["userName"] 
+    end
+end
+    
+
+#page = agent.get("http://profiles.us.playstation.com/playstation/psn/profile/get_gamer_summary_data?id=nlconnor")
+
+#print page.body
