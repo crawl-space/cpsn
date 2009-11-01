@@ -21,4 +21,4 @@ rescue LoadError
   puts "Jeweler (or a dependency) not available. Install it with: gem install jeweler"
 end
 
-task :default => nil
+task :default => :build
