@@ -11,7 +11,6 @@ begin
     gem.homepage = "http://github.com/jbowes/cpsn"
     gem.authors = ["James Bowes"]
     gem.add_dependency "mechanize"
-    gem.add_dependency "hpricot"
     gem.add_dependency "json"
     # there's nothing in lib, so ignore it to quelch warnings during install
     gem.require_paths = ["bin"]

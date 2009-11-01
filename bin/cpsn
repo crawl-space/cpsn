@@ -2,7 +2,6 @@
 
 require 'rubygems'
 require 'mechanize'
-require 'hpricot'
 require 'json'
 
 $username = ARGV[0]
@@ -36,8 +35,7 @@ end
 
 def get_friends(agent)
     page = agent.get($friend_url)
-    body = Hpricot.parse(page.body)
-    divs = body.search("div.slotcontent")
+    divs = page.search("div.slotcontent")
 
     friends = []
     for div in divs
