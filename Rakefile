@@ -10,8 +10,8 @@ begin
     gem.email = "jbowes@repl.ca"
     gem.homepage = "http://github.com/jbowes/cpsn"
     gem.authors = ["James Bowes"]
-    gem.add_dependency "mechanize"
-    gem.add_dependency "json"
+    gem.add_dependency "mechanize", ">= 0.9.3"
+    gem.add_dependency "json", ">= 1.1.7"
     # there's nothing in lib, so ignore it to quelch warnings during install
     gem.require_paths = ["bin"]
   end
