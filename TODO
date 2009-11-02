@@ -1,3 +1,2 @@
-save cookie jar so subsequent runs don't need to login
-read username/pass from a config file
+know how to expire cookie jar
 be able to define groups of users in the config file, and query them
