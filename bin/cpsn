@@ -91,7 +91,9 @@ for friend_name in friend_names
     friend = get_friend_status(agent, friend_name)
 
     if friend
-        puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing]
+        if friend[:status] != "offline"
+            puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing]
+        end
     else
         puts "Error: no access to " + friend_name
     end
