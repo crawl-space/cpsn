@@ -5,17 +5,24 @@ require 'mechanize'
 require 'json'
 require 'yaml'
 require 'optparse'
+require 'logger'
 
 $login_url = "https://store.playstation.com/external/index.vm?returnURL=https%3a%2f%2fsecureus.playstation.com%2fRegistration%2fPSNL%2fSignInFrame.aspx"
 $friend_url = "http://profiles.us.playstation.com/playstation/psn/profile/friends"
 $json_url = "http://profiles.us.playstation.com/playstation/psn/profile/get_gamer_summary_data?id="
 
+
+$log = Logger.new(STDERR)
+$log.level = Logger::WARN
+
 def load_settings()
+    $log.debug("Loading settings")
     settings = YAML::parse_file(File.expand_path("~/.cpsn/settings.yml"))
     return settings
 end
 
 def get_cookie(agent, username, password)
+    $log.debug("Signing in for new cookie")
     page = agent.get($login_url)
     login_form = page.forms.first
     login_form.loginName = username
@@ -34,6 +41,7 @@ def get_cookie(agent, username, password)
 end
 
 def get_agent(username, password)
+    $log.debug("Creating new user agent")
     agent = WWW::Mechanize.new
     agent.user_agent_alias = 'Mac FireFox'
     agent.redirect_ok = true
@@ -48,20 +56,26 @@ def get_agent(username, password)
 end
 
 def get_friends(agent)
+    $log.debug("Getting friends list")
     page = agent.get($friend_url)
     divs = page.search("div.slotcontent")
 
     friends = []
     for div in divs
-        friends << div.attributes["id"]
+        friend = div.attributes["id"]
+        friends << friend
+        $log.debug("Found friend #{friend}")
     end
 
     return friends
 end 
 
 def get_friend_status(agent, friend)
+    $log.debug("Loading friend status for #{friend}")
     page = agent.get($json_url + friend)
     data = JSON.parse(page.body)
+
+    $log.debug(data)
 
     friend = {:name => data["userName"]}
 
@@ -72,9 +86,11 @@ def get_friend_status(agent, friend)
     if data["onlineStatus"]["extensionStatus"] != nil
        friend[:status] = 'online'
        friend[:playing] = data["onlineStatus"]["extensionStatus"]["title"]
+       friend[:game_status] = data["onlineStatus"]["extensionStatus"]["status"]
     else
        friend[:status] = 'offline'
        friend[:playing] = ""
+       friend[:game_status] = ""
     end
 
     return friend
@@ -86,6 +102,11 @@ optparse = OptionParser.new do |opts|
     opts.on('-o', '--offline', 'Show offline contacts') do
         options[:offline] = true
     end
+
+    opts.on('-d', '--debug', 'Show debugging information') do
+        $log.level = Logger::DEBUG
+    end
+
 
     opts.on(nil, '--version', 'Display version information') do
         gem_dir = File.join(File.dirname(__FILE__), '..')
@@ -127,7 +148,7 @@ for friend_name in friend_names
 
     if friend
         if friend[:status] != "offline" or options[:offline]
-            puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing]
+            puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing] + "\t" + friend[:game_status]
         end
     else
         puts "Error: no access to " + friend_name
