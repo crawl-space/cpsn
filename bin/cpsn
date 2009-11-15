@@ -4,6 +4,7 @@ require 'rubygems'
 require 'mechanize'
 require 'json'
 require 'yaml'
+require 'optparse'
 
 $login_url = "https://store.playstation.com/external/index.vm?returnURL=https%3a%2f%2fsecureus.playstation.com%2fRegistration%2fPSNL%2fSignInFrame.aspx"
 $friend_url = "http://profiles.us.playstation.com/playstation/psn/profile/friends"
@@ -79,6 +80,29 @@ def get_friend_status(agent, friend)
     return friend
 end
 
+options = {}
+optparse = OptionParser.new do |opts|
+    options[:offline] = false
+    opts.on('-o', '--offline', 'Show offline contacts') do
+        options[:offline] = true
+    end
+
+    opts.on(nil, '--version', 'Display version information') do
+        gem_dir = File.join(File.dirname(__FILE__), '..')
+        File.open(File.join(gem_dir, 'VERSION')) do |version_file|
+            print version_file.read
+        end
+        exit
+    end
+
+    opts.on('-h', '--help', 'Show help') do 
+        puts opts
+        exit
+    end
+end
+
+optparse.parse!
+
 settings = load_settings()
 agent = get_agent(settings[:username].value, settings[:password].value)
 
@@ -102,7 +126,7 @@ for friend_name in friend_names
     end
 
     if friend
-        if friend[:status] != "offline"
+        if friend[:status] != "offline" or options[:offline]
             puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing]
         end
     else
