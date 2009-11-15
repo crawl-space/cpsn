@@ -1,2 +1,4 @@
 be able to define groups of users in the config file, and query them
 make filtering out offline friends optional
+show any status for what map ppl are in etc (like in modern warfare 2)
+logging with --verbose option
