@@ -17,16 +17,7 @@ def load_settings()
     return settings
 end
 
-def get_agent(username, password)
-    agent = WWW::Mechanize.new
-    agent.user_agent_alias = 'Mac FireFox'
-    agent.redirect_ok = true
-
-    if File.exist? File.expand_path("~/.cpsn/cookies.yml")
-        agent.cookie_jar.load File.expand_path("~/.cpsn/cookies.yml")
-        return agent
-    end
-
+def get_cookie(agent, username, password)
     page = agent.get($login_url)
     login_form = page.forms.first
     login_form.loginName = username
@@ -42,6 +33,19 @@ def get_agent(username, password)
     page = link.click
   
     agent.cookie_jar.save_as File.expand_path("~/.cpsn/cookies.yml")
+end
+
+def get_agent(username, password)
+    agent = WWW::Mechanize.new
+    agent.user_agent_alias = 'Mac FireFox'
+    agent.redirect_ok = true
+
+    if File.exist? File.expand_path("~/.cpsn/cookies.yml")
+        agent.cookie_jar.load File.expand_path("~/.cpsn/cookies.yml")
+        return agent
+    end
+
+    get_cookie(agent, username, password)
     return agent
 end
 
@@ -84,11 +88,21 @@ agent = get_agent(settings[:username].value, settings[:password].value)
 if ARGV.length >= 1
     friend_names = ARGV[0..-1]
 else
-    friend_names = get_friends(agent)
+    begin
+        friend_names = get_friends(agent)
+    rescue WWW::Mechanize::ResponseCodeError
+        get_cookie(agent, settings[:username].value, settings[:password].value)
+        retry
+    end
 end
 
 for friend_name in friend_names
-    friend = get_friend_status(agent, friend_name)
+    begin
+        friend = get_friend_status(agent, friend_name)
+    rescue WWW::Mechanize::ResponseCodeError
+        get_cookie(agent, settings[:username].value, settings[:password].value)
+        retry
+    end
 
     if friend
         if friend[:status] != "offline"
