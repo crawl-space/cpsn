@@ -6,6 +6,7 @@ require 'json'
 require 'yaml'
 require 'optparse'
 require 'logger'
+require 'set'
 
 $login_url = "https://store.playstation.com/external/index.vm?returnURL=https%3a%2f%2fsecureus.playstation.com%2fRegistration%2fPSNL%2fSignInFrame.aspx"
 $friend_url = "http://profiles.us.playstation.com/playstation/psn/profile/friends"
@@ -19,6 +20,25 @@ def load_settings()
     $log.debug("Loading settings")
     settings = YAML::parse_file(File.expand_path("~/.cpsn/settings.yml"))
     return settings
+end
+
+def load_groups(settings)
+    $log.debug("Loading groups")
+    groups = {}
+    for group in settings[:groups].value
+        name = group.value.keys[0].value
+        vals = group.value[group.value.keys[0]]
+        members = []
+        mem_str = ""
+        for user in vals.value do
+            members << user.value
+            mem_str += user.value 
+            mem_str += " "
+        end
+        $log.debug("Found group #{name} [ #{mem_str}]")
+        groups[name] = members
+    end
+    return groups
 end
 
 def get_cookie(agent, username, password)
@@ -125,10 +145,19 @@ end
 optparse.parse!
 
 settings = load_settings()
+groups = load_groups(settings)
 agent = get_agent(settings[:username].value, settings[:password].value)
 
 if ARGV.length >= 1
-    friend_names = ARGV[0..-1]
+    friend_names = Set.new []
+    args = ARGV[0..-1]
+    for arg in args
+        if groups.has_key? arg
+            friend_names.merge(groups[arg])
+        else
+            friend_names.add(arg)
+        end
+    end
 else
     begin
         friend_names = get_friends(agent)
