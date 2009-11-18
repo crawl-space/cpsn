@@ -25,6 +25,11 @@ end
 def load_groups(settings)
     $log.debug("Loading groups")
     groups = {}
+    
+    if not settings.value.has_key?(:groups)
+        return groups
+    end
+
     for group in settings[:groups].value
         name = group.value.keys[0].value
         vals = group.value[group.value.keys[0]]
