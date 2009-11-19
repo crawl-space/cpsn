@@ -25,8 +25,8 @@ end
 def load_groups(settings)
     $log.debug("Loading groups")
     groups = {}
-    
-    if not settings.value.has_key?(:groups)
+
+    if not settings[:groups]
         return groups
     end
 
