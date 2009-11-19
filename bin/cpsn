@@ -65,13 +65,13 @@ def get_cookie(agent, username, password)
     agent.cookie_jar.save_as File.expand_path("~/.cpsn/cookies.yml")
 end
 
-def get_agent(username, password)
+def get_agent(username, password, force_cookie)
     $log.debug("Creating new user agent")
     agent = WWW::Mechanize.new
     agent.user_agent_alias = 'Mac FireFox'
     agent.redirect_ok = true
 
-    if File.exist? File.expand_path("~/.cpsn/cookies.yml")
+    if File.exist? File.expand_path("~/.cpsn/cookies.yml") and not force_cookie
         agent.cookie_jar.load File.expand_path("~/.cpsn/cookies.yml")
         return agent
     end
@@ -132,6 +132,10 @@ optparse = OptionParser.new do |opts|
         $log.level = Logger::DEBUG
     end
 
+    options[:cookie] = false
+    opts.on('-c', '--cookie', 'Force cookie expiration') do
+        options[:cookie] = true
+    end
 
     opts.on(nil, '--version', 'Display version information') do
         gem_dir = File.join(File.dirname(__FILE__), '..')
@@ -151,7 +155,8 @@ optparse.parse!
 
 settings = load_settings()
 groups = load_groups(settings)
-agent = get_agent(settings[:username].value, settings[:password].value)
+agent = get_agent(settings[:username].value, settings[:password].value,
+                  options[:cookie])
 
 if ARGV.length >= 1
     friend_names = Set.new []
