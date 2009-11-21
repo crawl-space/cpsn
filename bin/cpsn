@@ -172,7 +172,8 @@ else
     begin
         friend_names = get_friends(agent)
     rescue WWW::Mechanize::ResponseCodeError => response
-        if response.response_code == 404
+        puts response.response_code
+        if response.response_code == '403'
             get_cookie(agent, settings[:username].value,
                        settings[:password].value)
             retry
@@ -184,7 +185,7 @@ for friend_name in friend_names
     begin
         friend = get_friend_status(agent, friend_name)
     rescue WWW::Mechanize::ResponseCodeError => response
-        if response.response_code == 404
+        if response.response_code == '403'
             get_cookie(agent, settings[:username].value,
                        settings[:password].value)
             retry
