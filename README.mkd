@@ -1,11 +1,13 @@
-= cpsn =
+cpsn
+====
 
 cpsn lets you query your friend status on the Playstation Network (tm) via the
 command line interface. You can see friend status (online or offline), which
 game they are playing, and, if available, the game mode and map they are
 playing.
 
-== Setup ==
+Setup
+=====
 
 Before you can use cpsn, you must first create a settings file for your PSN
 username and password.  Create a ~/.cpsn directory, and inside it, put a settings.yml file like:
@@ -16,14 +18,16 @@ username and password.  Create a ~/.cpsn directory, and inside it, put a setting
 
 That's it!
 
-== Usage ==
+Usage
+=====
 
 'cpsn' by itself on the commandline will show you all friends on your friends
 list that are online. You can optionally list one or more friend names to see
 only their status, or provide a group name (see 'Defining Groups' below). You
 can also pass '-o' to see your offline friends as well.
 
-== Defining Groups ==
+Defining Groups
+===============
 
 If you find yourself looking for the status of a few friends frequently, you can define groups of users in your settings.yml file. Groups go under the ':groups:' section in the settings.yml file, and are the name you want to call them and a list of user names.
 
