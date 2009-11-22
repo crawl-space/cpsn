@@ -17,7 +17,17 @@ $log = Logger.new(STDERR)
 $log.level = Logger::WARN
 
 class Cpsn
-   
+
+    attr_accessor :settings, :groups
+  
+    def initialize(options)
+        @settings = load_settings()
+        @groups = load_groups(@settings)
+
+        get_agent(@settings[:username].value, @settings[:password].value,
+                  options[:cookie])
+    end
+
     def load_settings()
         $log.debug("Loading settings")
         settings = YAML::parse_file(File.expand_path("~/.cpsn/settings.yml"))
@@ -48,13 +58,13 @@ class Cpsn
         return groups
     end
 
-    def get_cookie(agent, username, password)
+    def get_cookie(username, password)
         $log.debug("Signing in for new cookie")
-        page = agent.get($login_url)
+        page = @agent.get($login_url)
         login_form = page.forms.first
         login_form.loginName = username
         login_form.password = password
-        page = agent.submit(login_form)
+        page = @agent.submit(login_form)
         link = page.links.first
 
         if link.text == "Sign In"
@@ -64,27 +74,25 @@ class Cpsn
 
         page = link.click
       
-        agent.cookie_jar.save_as File.expand_path("~/.cpsn/cookies.yml")
+        @agent.cookie_jar.save_as File.expand_path("~/.cpsn/cookies.yml")
     end
 
     def get_agent(username, password, force_cookie)
         $log.debug("Creating new user agent")
-        agent = WWW::Mechanize.new
-        agent.user_agent_alias = 'Mac FireFox'
-        agent.redirect_ok = true
+        @agent = WWW::Mechanize.new
+        @agent.user_agent_alias = 'Mac FireFox'
+        @agent.redirect_ok = true
 
         if File.exist? File.expand_path("~/.cpsn/cookies.yml") and not force_cookie
-            agent.cookie_jar.load File.expand_path("~/.cpsn/cookies.yml")
-            return agent
+            @agent.cookie_jar.load File.expand_path("~/.cpsn/cookies.yml")
+        else
+            get_cookie(username, password)
         end
-
-        get_cookie(agent, username, password)
-        return agent
     end
 
-    def get_friends(agent)
+    def get_friends()
         $log.debug("Getting friends list")
-        page = agent.get($friend_url)
+        page = @agent.get($friend_url)
         divs = page.search("div.slotcontent")
 
         friends = []
@@ -97,9 +105,9 @@ class Cpsn
         return friends
     end 
 
-    def get_friend_status(agent, friend)
+    def get_friend_status(friend)
         $log.debug("Loading friend status for #{friend}")
-        page = agent.get($json_url + friend)
+        page = @agent.get($json_url + friend)
         data = JSON.parse(page.body)
 
         $log.debug(data)
@@ -158,29 +166,25 @@ end
 
 optparse.parse!
 
-cpsn = Cpsn.new
-settings = cpsn.load_settings()
-groups = cpsn.load_groups(settings)
-agent = cpsn.get_agent(settings[:username].value, settings[:password].value,
-                  options[:cookie])
+cpsn = Cpsn.new(options)
 
 if ARGV.length >= 1
     friend_names = Set.new []
     args = ARGV[0..-1]
     for arg in args
-        if groups.has_key? arg
-            friend_names.merge(groups[arg])
+        if cpsn.groups.has_key? arg
+            friend_names.merge(cpsn.groups[arg])
         else
             friend_names.add(arg)
         end
     end
 else
     begin
-        friend_names = cpsn.get_friends(agent)
+        friend_names = cpsn.get_friends()
     rescue WWW::Mechanize::ResponseCodeError => response
         if response.response_code == '403'
-            cpsn.get_cookie(agent, settings[:username].value,
-                       settings[:password].value)
+            cpsn.get_cookie(cpsn.settings[:username].value,
+                            cpsn.settings[:password].value)
             retry
         end
     end
@@ -188,11 +192,11 @@ end
 
 for friend_name in friend_names
     begin
-        friend = cpsn.get_friend_status(agent, friend_name)
+        friend = cpsn.get_friend_status(friend_name)
     rescue WWW::Mechanize::ResponseCodeError => response
         if response.response_code == '403'
-            cpsn.get_cookie(agent, settings[:username].value,
-                       settings[:password].value)
+            cpsn.get_cookie(cpsn.settings[:username].value,
+                            cpsn.settings[:password].value)
             retry
         end
     end
