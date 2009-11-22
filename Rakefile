@@ -6,7 +6,11 @@ begin
   Jeweler::Tasks.new do |gem|
     gem.name = "cpsn"
     gem.summary = %Q{Query PSN friend status from the CLI}
-    gem.description = %Q{Query PSN friend status from the CLI}
+    gem.description = %Q{
+        Query PSN friend status from the CLI. Shows useful information like the
+        game being played, and what mode or map your friend is playing
+        (if available).
+    }
     gem.email = "jbowes@repl.ca"
     gem.homepage = "http://github.com/jbowes/cpsn"
     gem.authors = ["James Bowes"]

@@ -1,4 +1,9 @@
 #!/usr/bin/ruby
+#
+# cpsn - Query Friend status on the Playstation Network (tm)
+#
+# Author:: James Bowes <jbowes@repl.ca>
+# Copyright:: Copyright (C) 2009 James Bowes
 
 require 'rubygems'
 require 'mechanize'
