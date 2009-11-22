@@ -18,6 +18,7 @@ begin
     gem.add_dependency "json", ">= 1.1.7"
     # there's nothing in lib, so ignore it to quelch warnings during install
     gem.require_paths = ["bin"]
+    gem.extra_rdoc_files = ""
   end
   Jeweler::GemcutterTasks.new
 rescue LoadError
