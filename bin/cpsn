@@ -16,110 +16,115 @@ $json_url = "http://profiles.us.playstation.com/playstation/psn/profile/get_game
 $log = Logger.new(STDERR)
 $log.level = Logger::WARN
 
-def load_settings()
-    $log.debug("Loading settings")
-    settings = YAML::parse_file(File.expand_path("~/.cpsn/settings.yml"))
-    return settings
-end
+class Cpsn
+   
+    def load_settings()
+        $log.debug("Loading settings")
+        settings = YAML::parse_file(File.expand_path("~/.cpsn/settings.yml"))
+        return settings
+    end
+   
+    def load_groups(settings)
+        $log.debug("Loading groups")
+        groups = {}
 
-def load_groups(settings)
-    $log.debug("Loading groups")
-    groups = {}
+        if not settings[:groups]
+            return groups
+        end
 
-    if not settings[:groups]
+        for group in settings[:groups].value
+            name = group.value.keys[0].value
+            vals = group.value[group.value.keys[0]]
+            members = []
+            mem_str = ""
+            for user in vals.value do
+                members << user.value
+                mem_str += user.value 
+                mem_str += " "
+            end
+            $log.debug("Found group #{name} [ #{mem_str}]")
+            groups[name] = members
+        end
         return groups
     end
 
-    for group in settings[:groups].value
-        name = group.value.keys[0].value
-        vals = group.value[group.value.keys[0]]
-        members = []
-        mem_str = ""
-        for user in vals.value do
-            members << user.value
-            mem_str += user.value 
-            mem_str += " "
+    def get_cookie(agent, username, password)
+        $log.debug("Signing in for new cookie")
+        page = agent.get($login_url)
+        login_form = page.forms.first
+        login_form.loginName = username
+        login_form.password = password
+        page = agent.submit(login_form)
+        link = page.links.first
+
+        if link.text == "Sign In"
+            puts "Error logging in. Did you give the right username and password?"
+            exit
         end
-        $log.debug("Found group #{name} [ #{mem_str}]")
-        groups[name] = members
-    end
-    return groups
-end
 
-def get_cookie(agent, username, password)
-    $log.debug("Signing in for new cookie")
-    page = agent.get($login_url)
-    login_form = page.forms.first
-    login_form.loginName = username
-    login_form.password = password
-    page = agent.submit(login_form)
-    link = page.links.first
-
-    if link.text == "Sign In"
-        puts "Error logging in. Did you give the right username and password?"
-        exit
+        page = link.click
+      
+        agent.cookie_jar.save_as File.expand_path("~/.cpsn/cookies.yml")
     end
 
-    page = link.click
-  
-    agent.cookie_jar.save_as File.expand_path("~/.cpsn/cookies.yml")
-end
+    def get_agent(username, password, force_cookie)
+        $log.debug("Creating new user agent")
+        agent = WWW::Mechanize.new
+        agent.user_agent_alias = 'Mac FireFox'
+        agent.redirect_ok = true
 
-def get_agent(username, password, force_cookie)
-    $log.debug("Creating new user agent")
-    agent = WWW::Mechanize.new
-    agent.user_agent_alias = 'Mac FireFox'
-    agent.redirect_ok = true
+        if File.exist? File.expand_path("~/.cpsn/cookies.yml") and not force_cookie
+            agent.cookie_jar.load File.expand_path("~/.cpsn/cookies.yml")
+            return agent
+        end
 
-    if File.exist? File.expand_path("~/.cpsn/cookies.yml") and not force_cookie
-        agent.cookie_jar.load File.expand_path("~/.cpsn/cookies.yml")
+        get_cookie(agent, username, password)
         return agent
     end
 
-    get_cookie(agent, username, password)
-    return agent
+    def get_friends(agent)
+        $log.debug("Getting friends list")
+        page = agent.get($friend_url)
+        divs = page.search("div.slotcontent")
+
+        friends = []
+        for div in divs
+            friend = div.attributes["id"]
+            friends << friend
+            $log.debug("Found friend #{friend}")
+        end
+
+        return friends
+    end 
+
+    def get_friend_status(agent, friend)
+        $log.debug("Loading friend status for #{friend}")
+        page = agent.get($json_url + friend)
+        data = JSON.parse(page.body)
+
+        $log.debug(data)
+
+        friend = {:name => data["userName"]}
+
+        if data["onlineStatus"] == nil
+            return nil
+        end
+
+        if data["onlineStatus"]["extensionStatus"] != nil
+           friend[:status] = 'online'
+           friend[:playing] = data["onlineStatus"]["extensionStatus"]["title"]
+           friend[:game_status] = data["onlineStatus"]["extensionStatus"]["status"]
+        else
+           friend[:status] = 'offline'
+           friend[:playing] = ""
+           friend[:game_status] = ""
+        end
+
+        return friend
+    end
+
 end
 
-def get_friends(agent)
-    $log.debug("Getting friends list")
-    page = agent.get($friend_url)
-    divs = page.search("div.slotcontent")
-
-    friends = []
-    for div in divs
-        friend = div.attributes["id"]
-        friends << friend
-        $log.debug("Found friend #{friend}")
-    end
-
-    return friends
-end 
-
-def get_friend_status(agent, friend)
-    $log.debug("Loading friend status for #{friend}")
-    page = agent.get($json_url + friend)
-    data = JSON.parse(page.body)
-
-    $log.debug(data)
-
-    friend = {:name => data["userName"]}
-
-    if data["onlineStatus"] == nil
-        return nil
-    end
-
-    if data["onlineStatus"]["extensionStatus"] != nil
-       friend[:status] = 'online'
-       friend[:playing] = data["onlineStatus"]["extensionStatus"]["title"]
-       friend[:game_status] = data["onlineStatus"]["extensionStatus"]["status"]
-    else
-       friend[:status] = 'offline'
-       friend[:playing] = ""
-       friend[:game_status] = ""
-    end
-
-    return friend
-end
 
 options = {}
 optparse = OptionParser.new do |opts|
@@ -153,9 +158,10 @@ end
 
 optparse.parse!
 
-settings = load_settings()
-groups = load_groups(settings)
-agent = get_agent(settings[:username].value, settings[:password].value,
+cpsn = Cpsn.new
+settings = cpsn.load_settings()
+groups = cpsn.load_groups(settings)
+agent = cpsn.get_agent(settings[:username].value, settings[:password].value,
                   options[:cookie])
 
 if ARGV.length >= 1
@@ -170,10 +176,10 @@ if ARGV.length >= 1
     end
 else
     begin
-        friend_names = get_friends(agent)
+        friend_names = cpsn.get_friends(agent)
     rescue WWW::Mechanize::ResponseCodeError => response
         if response.response_code == '403'
-            get_cookie(agent, settings[:username].value,
+            cpsn.get_cookie(agent, settings[:username].value,
                        settings[:password].value)
             retry
         end
@@ -182,10 +188,10 @@ end
 
 for friend_name in friend_names
     begin
-        friend = get_friend_status(agent, friend_name)
+        friend = cpsn.get_friend_status(agent, friend_name)
     rescue WWW::Mechanize::ResponseCodeError => response
         if response.response_code == '403'
-            get_cookie(agent, settings[:username].value,
+            cpsn.get_cookie(agent, settings[:username].value,
                        settings[:password].value)
             retry
         end
