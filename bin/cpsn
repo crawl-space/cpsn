@@ -114,8 +114,8 @@ class Cpsn
         rescue WWW::Mechanize::ResponseCodeError => response
             puts response
             if response.response_code == '403'
-                cpsn.get_cookie(cpsn.settings[:username].value,
-                                cpsn.settings[:password].value)
+                get_cookie(@settings[:username].value,
+                           @settings[:password].value)
                 retry
             else
                 raise response
@@ -128,8 +128,8 @@ class Cpsn
             return _get_friend_status(friend)
         rescue WWW::Mechanize::ResponseCodeError => response
             if response.response_code == '403'
-                cpsn.get_cookie(cpsn.settings[:username].value,
-                                cpsn.settings[:password].value)
+                get_cookie(@settings[:username].value,
+                           @settings[:password].value)
                 retry
             else
                 raise response
