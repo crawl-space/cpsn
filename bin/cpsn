@@ -112,7 +112,6 @@ class Cpsn
         begin
             return _get_friends()
         rescue WWW::Mechanize::ResponseCodeError => response
-            puts response
             if response.response_code == '403'
                 get_cookie(@settings[:username].value,
                            @settings[:password].value)
