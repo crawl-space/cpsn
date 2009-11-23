@@ -29,7 +29,10 @@ can also pass '-o' to see your offline friends as well.
 Defining Groups
 ===============
 
-If you find yourself looking for the status of a few friends frequently, you can define groups of users in your settings.yml file. Groups go under the ':groups:' section in the settings.yml file, and are the name you want to call them and a list of user names.
+If you find yourself looking for the status of a few friends frequently, you
+can define groups of users in your settings.yml file. Groups go under the
+':groups:' section in the settings.yml file, and are the name you want to call
+them and a list of user names.
 
 For example:
     
@@ -39,4 +42,10 @@ For example:
 
     :groups:
      - mw2: [friend1, friend2, friend3]
-    
+
+You may also set a default group for cpsn to query instead of all friends when
+you run the command with no arguments (you can still access all friends with
+'cpsn all'):
+
+    :groups:
+     - default: mw2

@@ -20,7 +20,7 @@ $json_url = "http://profiles.us.playstation.com/playstation/psn/profile/get_game
 
 class Cpsn
 
-    attr_accessor :settings, :groups
+    attr_accessor :settings, :groups, :default_group
   
     def initialize(options)
         @log = Logger.new(STDERR)
@@ -28,6 +28,9 @@ class Cpsn
         if options[:debug]
             @log.level = Logger::DEBUG
         end
+       
+        # may be set in load_groups
+        @default_group = 'all'
 
         @settings = load_settings()
         @groups = load_groups(@settings)
@@ -53,6 +56,13 @@ class Cpsn
         for group in settings[:groups].value
             name = group.value.keys[0].value
             vals = group.value[group.value.keys[0]]
+
+            if name == 'default'
+                @default_group = vals.value
+                @log.debug("Found default group #{@default_group}")
+                next
+            end
+
             members = []
             mem_str = ""
             for user in vals.value do
@@ -209,7 +219,7 @@ optparse.parse!
 cpsn = Cpsn.new(options)
 
 if ARGV.length == 0
-    ARGV << 'all'
+    ARGV << cpsn.default_group
 end
 
 friend_names = Set.new []
