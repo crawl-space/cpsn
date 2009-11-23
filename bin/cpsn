@@ -99,6 +99,37 @@ class Cpsn
     end
 
     def get_friends()
+        begin
+            return _get_friends()
+        rescue WWW::Mechanize::ResponseCodeError => response
+            puts response
+            if response.response_code == '403'
+                cpsn.get_cookie(cpsn.settings[:username].value,
+                                cpsn.settings[:password].value)
+                retry
+            else
+                raise response
+            end
+        end
+    end
+
+    def get_friend_status(friend)
+        begin
+            return _get_friend_status(friend)
+        rescue WWW::Mechanize::ResponseCodeError => response
+            if response.response_code == '403'
+                cpsn.get_cookie(cpsn.settings[:username].value,
+                                cpsn.settings[:password].value)
+                retry
+            else
+                raise response
+            end
+        end
+    end
+
+    private
+
+    def _get_friends()
         @log.debug("Getting friends list")
         page = @agent.get($friend_url)
         divs = page.search("div.slotcontent")
@@ -113,7 +144,7 @@ class Cpsn
         return friends
     end 
 
-    def get_friend_status(friend)
+    def _get_friend_status(friend)
         @log.debug("Loading friend status for #{friend}")
         page = @agent.get($json_url + friend)
         data = JSON.parse(page.body)
@@ -188,27 +219,11 @@ if ARGV.length >= 1 and not ARGV.include? 'all'
         end
     end
 else
-    begin
-        friend_names = cpsn.get_friends()
-    rescue WWW::Mechanize::ResponseCodeError => response
-        if response.response_code == '403'
-            cpsn.get_cookie(cpsn.settings[:username].value,
-                            cpsn.settings[:password].value)
-            retry
-        end
-    end
+    friend_names = cpsn.get_friends()
 end
 
 for friend_name in friend_names
-    begin
-        friend = cpsn.get_friend_status(friend_name)
-    rescue WWW::Mechanize::ResponseCodeError => response
-        if response.response_code == '403'
-            cpsn.get_cookie(cpsn.settings[:username].value,
-                            cpsn.settings[:password].value)
-            retry
-        end
-    end
+    friend = cpsn.get_friend_status(friend_name)
 
     if friend
         if friend[:status] != "offline" or options[:offline]
