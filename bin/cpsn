@@ -208,18 +208,19 @@ optparse.parse!
 
 cpsn = Cpsn.new(options)
 
-if ARGV.length >= 1 and not ARGV.include? 'all'
-    friend_names = Set.new []
-    args = ARGV[0..-1]
-    for arg in args
-        if cpsn.groups.has_key? arg
-            friend_names.merge(cpsn.groups[arg])
-        else
-            friend_names.add(arg)
-        end
+if ARGV.length == 0
+    ARGV << 'all'
+end
+
+friend_names = Set.new []
+for arg in ARGV
+    if arg == 'all'
+        friend_names.merge(cpsn.get_friends)
+    elsif cpsn.groups.has_key? arg
+        friend_names.merge(cpsn.groups[arg])
+    else
+        friend_names.add(arg)
     end
-else
-    friend_names = cpsn.get_friends()
 end
 
 for friend_name in friend_names
