@@ -97,7 +97,7 @@ class Cpsn
 
     def get_agent(username, password, force_cookie)
         @log.debug("Creating new user agent")
-        @agent = WWW::Mechanize.new
+        @agent = Mechanize.new
         @agent.user_agent_alias = 'Mac FireFox'
         @agent.redirect_ok = true
 
@@ -111,7 +111,7 @@ class Cpsn
     def get_friends()
         begin
             return _get_friends()
-        rescue WWW::Mechanize::ResponseCodeError => response
+        rescue Mechanize::ResponseCodeError => response
             if response.response_code == '403'
                 get_cookie(@settings[:username].value,
                            @settings[:password].value)
@@ -125,7 +125,7 @@ class Cpsn
     def get_friend_status(friend)
         begin
             return _get_friend_status(friend)
-        rescue WWW::Mechanize::ResponseCodeError => response
+        rescue Mechanize::ResponseCodeError => response
             if response.response_code == '403'
                 get_cookie(@settings[:username].value,
                            @settings[:password].value)
