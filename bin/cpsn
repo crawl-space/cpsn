@@ -3,7 +3,7 @@
 # cpsn - Query Friend status on the Playstation Network (tm)
 #
 # Author:: James Bowes <jbowes@repl.ca>
-# Copyright:: Copyright (C) 2009 James Bowes
+# Copyright:: Copyright (C) 2009 - 2011 James Bowes
 
 require 'rubygems'
 require 'mechanize'
@@ -13,9 +13,8 @@ require 'optparse'
 require 'logger'
 require 'set'
 
-$login_url = "https://store.playstation.com/external/index.vm?returnURL=https%3a%2f%2fsecureus.playstation.com%2fRegistration%2fPSNL%2fSignInFrame.aspx"
-$friend_url = "http://profiles.us.playstation.com/playstation/psn/profile/friends"
-$json_url = "http://profiles.us.playstation.com/playstation/psn/profile/get_gamer_summary_data?id="
+$login_url = "https://store.playstation.com/external/index.vm?returnURL=http://us.playstation.com/uwps/PSNTicketRetrievalGenericServlet"
+$friend_url = "http://us.playstation.com/playstation/psn/profile/friends?id="
 
 
 class Cpsn
@@ -76,23 +75,46 @@ class Cpsn
         return groups
     end
 
+
+    def login_failed
+        puts "Error logging in. Did you give the right username and password?"
+        exit
+    end
+
+
     def get_cookie(username, password)
         @log.debug("Signing in for new cookie")
+
+        @agent.redirect_ok = false
         page = @agent.get($login_url)
         login_form = page.forms.first
-        login_form.loginName = username
-        login_form.password = password
+        login_form.j_username = username
+        login_form.j_password = password
         page = @agent.submit(login_form)
-        link = page.links.first
-
-        if link.text == "Sign In"
-            puts "Error logging in. Did you give the right username and password?"
-            exit
+        
+        if page.code != "302"
+            login_failed
         end
 
-        page = link.click
-      
+        page = @agent.get(page.response['Location'])
+
+        if page.code != "302"
+            login_failed
+        end
+
+        # we don't need to follow this last redirect, just to get the sesison
+        # id
+        location = page.response['Location']
+        parts = location.split("sessionId=")
+        sessionId = parts[1]
+
+        # this sets the sessionid cookie and others, which we need.
+        @agent.get("http://us.playstation.com/uwps/HandleIFrameRequests?sessionId=" + sessionId)
+
         @agent.cookie_jar.save_as File.expand_path("~/.cpsn/cookies.yml")
+
+
+        @agent.redirect_ok = true
     end
 
     def get_agent(username, password, force_cookie)
@@ -140,7 +162,12 @@ class Cpsn
 
     def _get_friends()
         @log.debug("Getting friends list")
-        page = @agent.get($friend_url)
+        @agent.get( "http://us.playstation.com/myfriends/")
+        url = $friend_url + rand().to_s
+        page = @agent.get("http://us.playstation.com/uwps/decryptText?id=0.1234554")
+        @log.debug("friend url: " + url)
+        page = @agent.get(url, nil, "http://us.playstation.com/myfriends/")
+
         divs = page.search("div.slotcontent")
 
         friends = []
@@ -155,25 +182,21 @@ class Cpsn
 
     def _get_friend_status(friend)
         @log.debug("Loading friend status for #{friend}")
-        page = @agent.get($json_url + friend)
-        data = JSON.parse(page.body)
+        page = @agent.get("http://us.playstation.com/playstation/psn/profile/" + friend + "?id=0.12343", nil, "http://us.playstation.com/myfriends")
 
-        @log.debug(data)
+        friend = {:name => friend,
+                  :status => 'offline',
+                  :playing => '',
+        }
 
-        friend = {:name => data["userName"]}
+        status = page.search("div.oStatus")[0]
 
-        if data["onlineStatus"] == nil
-            return nil
-        end
+        if status.search("div")[0].attributes['class'].to_s == "onlineStatus online"
+            friend[:status] = "online"
 
-        if data["onlineStatus"]["extensionStatus"] != nil
-           friend[:status] = 'online'
-           friend[:playing] = data["onlineStatus"]["extensionStatus"]["title"]
-           friend[:game_status] = data["onlineStatus"]["extensionStatus"]["status"]
-        else
-           friend[:status] = 'offline'
-           friend[:playing] = ""
-           friend[:game_status] = ""
+            playing = page.search("span._iamplaying_")
+            friend[:playing] = playing[0].text.strip
+
         end
 
         return friend
@@ -237,7 +260,7 @@ for friend_name in friend_names
 
     if friend
         if friend[:status] != "offline" or options[:offline]
-            puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing] + "\t" + friend[:game_status]
+            puts friend[:status] + "\t" + friend[:name] + "\t" + friend[:playing]
         end
     else
         puts "Error: no access to " + friend_name
