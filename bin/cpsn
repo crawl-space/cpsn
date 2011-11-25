@@ -17,6 +17,9 @@ $login_url = "https://store.playstation.com/external/index.vm?returnURL=http://u
 $friend_url = "http://us.playstation.com/playstation/psn/profile/friends?id="
 
 
+class NotLoggedInError < Exception
+end
+
 class Cpsn
 
     attr_accessor :settings, :groups, :default_group
@@ -141,7 +144,12 @@ class Cpsn
             else
                 raise response
             end
+        rescue NotLoggedInError
+            get_cookie(@settings[:username].value,
+                       @settings[:password].value)
+            retry
         end
+
     end
 
     def get_friend_status(friend)
@@ -169,6 +177,10 @@ class Cpsn
         page = @agent.get(url, nil, "http://us.playstation.com/myfriends/")
 
         divs = page.search("div.slotcontent")
+
+        if divs.length == 0
+            raise NotLoggedInError
+        end
 
         friends = []
         for div in divs
