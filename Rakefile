@@ -16,6 +16,7 @@ begin
     gem.authors = ["James Bowes"]
     gem.add_dependency "mechanize", ">= 0.9.3"
     gem.add_dependency "json", ">= 1.1.7"
+    gem.add_dependency "highline"
     # there's nothing in lib, so ignore it to quelch warnings during install
     gem.require_paths = ["bin"]
     gem.extra_rdoc_files = ""

@@ -12,6 +12,7 @@ require 'yaml'
 require 'optparse'
 require 'logger'
 require 'set'
+require 'highline/import'
 
 $login_url = "https://store.playstation.com/external/index.vm?returnURL=http://us.playstation.com/uwps/PSNTicketRetrievalGenericServlet"
 $friend_url = "http://us.playstation.com/playstation/psn/profile/friends?id="
@@ -37,13 +38,16 @@ class Cpsn
         @settings = load_settings()
         @groups = load_groups(@settings)
 
-        get_agent(@settings[:username].value, @settings[:password].value,
-                  options[:cookie])
+        get_agent(options[:cookie])
     end
 
     def load_settings()
         @log.debug("Loading settings")
-        settings = YAML::parse_file(File.expand_path("~/.cpsn/settings.yml"))
+        begin
+            settings = YAML::parse_file(File.expand_path("~/.cpsn/settings.yml"))
+        rescue
+            settings = {}.to_yaml
+        end
         return settings
     end
    
@@ -85,8 +89,28 @@ class Cpsn
     end
 
 
-    def get_cookie(username, password)
+    def get_username
+        ask("username: ")
+    end
+
+    def get_password
+        ask("password: ") {|q| q.echo = false}
+    end
+
+    def get_cookie
         @log.debug("Signing in for new cookie")
+
+        if @settings[:username].nil?
+            username = get_username
+        else
+            username = @settings[:username].value
+        end
+        
+        if @settings[:password].nil?
+            password = get_password
+        else
+            password = @settings[:password].value
+        end
 
         @agent.redirect_ok = false
         page = @agent.get($login_url)
@@ -114,13 +138,17 @@ class Cpsn
         # this sets the sessionid cookie and others, which we need.
         @agent.get("http://us.playstation.com/uwps/HandleIFrameRequests?sessionId=" + sessionId)
 
+        if not File.directory? File.expand_path("~/.cpsn")
+            Dir::mkdir File.expand_path("~/.cpsn")
+        end
+
         @agent.cookie_jar.save_as File.expand_path("~/.cpsn/cookies.yml")
 
 
         @agent.redirect_ok = true
     end
 
-    def get_agent(username, password, force_cookie)
+    def get_agent(force_cookie)
         @log.debug("Creating new user agent")
         @agent = Mechanize.new
         @agent.user_agent_alias = 'Mac FireFox'
@@ -129,7 +157,7 @@ class Cpsn
         if File.exist? File.expand_path("~/.cpsn/cookies.yml") and not force_cookie
             @agent.cookie_jar.load File.expand_path("~/.cpsn/cookies.yml")
         else
-            get_cookie(username, password)
+            get_cookie
         end
     end
 
@@ -138,15 +166,13 @@ class Cpsn
             return _get_friends()
         rescue Mechanize::ResponseCodeError => response
             if response.response_code == '403'
-                get_cookie(@settings[:username].value,
-                           @settings[:password].value)
+                get_cookie
                 retry
             else
                 raise response
             end
         rescue NotLoggedInError
-            get_cookie(@settings[:username].value,
-                       @settings[:password].value)
+            get_cookie
             retry
         end
 
@@ -157,8 +183,7 @@ class Cpsn
             return _get_friend_status(friend)
         rescue Mechanize::ResponseCodeError => response
             if response.response_code == '403'
-                get_cookie(@settings[:username].value,
-                           @settings[:password].value)
+                get_cookie
                 retry
             else
                 raise response
